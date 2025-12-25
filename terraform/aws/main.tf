@@ -47,6 +47,7 @@ resource "aws_security_group" "app_sg" {
 resource "aws_instance" "app_instance" {
   ami           = var.ami_id
   instance_type = var.instance_type
+  key_name = "aws-ec2"
 
   security_groups = [aws_security_group.app_sg.name]
 
