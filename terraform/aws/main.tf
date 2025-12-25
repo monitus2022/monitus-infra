@@ -65,6 +65,11 @@ resource "aws_instance" "app_instance" {
 
 }
 
+resource "aws_eip" "app_eip" {
+  instance = aws_instance.app_instance.id
+  domain   = "vpc"
+}
+
 # Placeholder for future AWS components
 # resource "aws_db_instance" "example" { ... }  # For RDS
 # resource "aws_s3_bucket" "example" { ... }    # For S3
