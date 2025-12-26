@@ -5,10 +5,42 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    bucket         = "monitus-terraform-state"
+    key            = "monitus-infra/terraform.tfstate"
+    region         = "ap-northeast-3"
+    dynamodb_table = "terraform-state-lock"
+  }
 }
 
 provider "aws" {
   region = var.region
+}
+
+# S3 bucket for Terraform state
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = "monitus-terraform-state"
+
+  tags = {
+    Name = "Terraform State Bucket"
+  }
+}
+
+# DynamoDB table for state locking
+resource "aws_dynamodb_table" "terraform_locks" {
+  name         = "terraform-state-lock"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+
+  tags = {
+    Name = "Terraform State Lock Table"
+  }
 }
 
 resource "aws_security_group" "app_sg" {
@@ -64,6 +96,10 @@ resource "aws_instance" "app_instance" {
     Name = "monitus"
   }
 
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes = [user_data]
+  }
 }
 
 resource "aws_eip" "app_eip" {
@@ -73,4 +109,3 @@ resource "aws_eip" "app_eip" {
 
 # Placeholder for future AWS components
 # resource "aws_db_instance" "example" { ... }  # For RDS
-# resource "aws_s3_bucket" "example" { ... }    # For S3
