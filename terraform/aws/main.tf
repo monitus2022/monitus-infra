@@ -20,6 +20,16 @@ provider "aws" {
   region = var.region
 }
 
+# Check for existing S3 bucket
+data "aws_s3_bucket" "existing_state" {
+  bucket = "monitus-terraform-state"
+}
+
+# Check for existing DynamoDB table
+data "aws_dynamodb_table" "existing_locks" {
+  name = "terraform-state-lock"
+}
+
 # Check for existing instance with same name
 data "aws_instances" "existing" {
   filter {
@@ -34,6 +44,7 @@ data "aws_instances" "existing" {
 
 # S3 bucket for Terraform state
 resource "aws_s3_bucket" "terraform_state" {
+  count  = try(data.aws_s3_bucket.existing_state.id, "") == "" ? 1 : 0
   bucket = "monitus-terraform-state"
 
   tags = {
@@ -42,7 +53,8 @@ resource "aws_s3_bucket" "terraform_state" {
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
+  count  = try(data.aws_s3_bucket.existing_state.id, "") == "" ? 1 : 0
+  bucket = aws_s3_bucket.terraform_state[0].id
   versioning_configuration {
     status = "Enabled"
   }
@@ -50,6 +62,7 @@ resource "aws_s3_bucket_versioning" "terraform_state" {
 
 # DynamoDB table for state locking
 resource "aws_dynamodb_table" "terraform_locks" {
+  count        = try(data.aws_dynamodb_table.existing_locks.id, "") == "" ? 1 : 0
   name         = "terraform-state-lock"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
