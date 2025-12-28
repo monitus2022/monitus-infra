@@ -63,7 +63,7 @@ jobs:
         sed -i 's/# \(}\)/\1/' main.tf
 
     - name: Reinitialize After Backend Changes
-      run: terraform init -reconfigure
+      run: echo "yes" | terraform init -migrate-state
 
     - name: Display Outputs
       run: terraform output
