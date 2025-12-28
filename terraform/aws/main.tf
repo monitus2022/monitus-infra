@@ -138,10 +138,18 @@ resource "aws_iam_role" "ec2_ecr_role" {
   })
 }
 
+# EC2 role policy
 resource "aws_iam_role_policy_attachment" "ec2_ecr_policy" {
   count      = try(data.aws_iam_role.existing_ecr_role.arn, null) == null ? 1 : 0
   role       = aws_iam_role.ec2_ecr_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+# SSM role policy
+resource "aws_iam_role_policy_attachment" "ec2_ssm_policy" {
+  count      = try(data.aws_iam_role.existing_ecr_role.arn, null) == null ? 1 : 0
+  role       = aws_iam_role.ec2_ecr_role[0].name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
