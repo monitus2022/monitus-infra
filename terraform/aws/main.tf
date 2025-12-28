@@ -181,5 +181,3 @@ resource "aws_instance" "app_instance" {
   }
 }
 
-# Placeholder for future AWS components
-# resource "aws_db_instance" "example" { ... }  # For RDS
