@@ -29,11 +29,38 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
-    - name: Terraform Init
+    - name: Check Backend Status
+      id: check_backend
+      run: |
+        if grep -q "# backend \"s3\"" main.tf; then
+          echo "backend_commented=true" >> $GITHUB_OUTPUT
+        else
+          echo "backend_commented=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Terraform Init (Local Backend)
+      if: steps.check_backend.outputs.backend_commented == 'true'
       run: terraform init
 
+    - name: Terraform Init (S3 Backend)
+      if: steps.check_backend.outputs.backend_commented == 'false'
+      run: terraform init -migrate-state
+
     - name: Terraform Plan
-      run: terraform plan -out=tfplan
+      run: terraform plan -var="account_id=${{ secrets.AWS_ACCOUNT_ID }}" -out=tfplan
 
     - name: Terraform Apply
       run: terraform apply -auto-approve tfplan
+
+    - name: Uncomment S3 Backend (if needed)
+      if: steps.check_backend.outputs.backend_commented == 'true'
+      run: |
+        sed -i 's/# \(backend "s3" {\)/\1/' main.tf
+        sed -i 's/# \(  bucket.*\)/\1/' main.tf
+        sed -i 's/# \(  key.*\)/\1/' main.tf
+        sed -i 's/# \(  region.*\)/\1/' main.tf
+        sed -i 's/# \(  dynamodb_table.*\)/\1/' main.tf
+        sed -i 's/# \(}\)/\1/' main.tf
+
+    - name: Display Outputs
+      run: terraform output

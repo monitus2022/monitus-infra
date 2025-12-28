@@ -6,16 +6,30 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket         = "monitus-terraform-state"
-    key            = "monitus-infra/terraform.tfstate"
-    region         = "ap-northeast-3"
-    dynamodb_table = "terraform-state-lock"
-  }
+  # Temporarily using local backend to create state infrastructure
+  # Uncomment the S3 backend after initial apply
+  # backend "s3" {
+  #   bucket         = "monitus-terraform-state"
+  #   key            = "monitus-infra/terraform.tfstate"
+  #   region         = "ap-northeast-3"
+  #   dynamodb_table = "terraform-state-lock"
+  # }
 }
 
 provider "aws" {
   region = var.region
+}
+
+# Check for existing instance with same name
+data "aws_instances" "existing" {
+  filter {
+    name   = "tag:Name"
+    values = ["monitus"]
+  }
+  filter {
+    name   = "instance-state-name"
+    values = ["running", "pending", "stopping", "stopped"]
+  }
 }
 
 # S3 bucket for Terraform state
@@ -24,6 +38,13 @@ resource "aws_s3_bucket" "terraform_state" {
 
   tags = {
     Name = "Terraform State Bucket"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
@@ -60,7 +81,6 @@ resource "aws_security_group" "app_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Placeholder for future components (e.g., HTTPS, database access)
   ingress {
     from_port   = 443
     to_port     = 443
@@ -76,20 +96,53 @@ resource "aws_security_group" "app_sg" {
   }
 }
 
+# IAM role for EC2 to access ECR
+resource "aws_iam_role" "ec2_ecr_role" {
+  name = "monitus-ec2-ecr-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_ecr_policy" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "monitus-ec2-profile"
+  role = aws_iam_role.ec2_ecr_role.name
+}
+
 resource "aws_instance" "app_instance" {
-  ami           = var.ami_id
-  instance_type = var.instance_type
-  key_name = "aws-ec2"
+  count                  = length(data.aws_instances.existing.ids) == 0 ? 1 : 0
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  key_name               = "aws-ec2"
+  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
 
   security_groups = [aws_security_group.app_sg.name]
 
   user_data = <<-EOF
   #!/bin/bash
   dnf update -y
-  dnf install -y docker
+  dnf install -y docker awscli
   systemctl start docker
   systemctl enable docker
   usermod -aG docker ec2-user
+
+  # Authenticate Docker with ECR
+  aws ecr get-login-password --region ${var.region} | docker login --username AWS --password-stdin ${var.account_id}.dkr.ecr.${var.region}.amazonaws.com
   EOF
 
   tags = {
@@ -103,7 +156,8 @@ resource "aws_instance" "app_instance" {
 }
 
 resource "aws_eip" "app_eip" {
-  instance = aws_instance.app_instance.id
+  count    = length(data.aws_instances.existing.ids) == 0 ? 1 : 0
+  instance = aws_instance.app_instance[0].id
   domain   = "vpc"
 }
 
