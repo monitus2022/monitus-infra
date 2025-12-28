@@ -155,7 +155,7 @@ resource "aws_instance" "app_instance" {
   ami                    = var.ami_id
   instance_type          = var.instance_type
   key_name               = "aws-ec2"
-  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
+  iam_instance_profile   = try(data.aws_iam_instance_profile.existing_profile.name, aws_iam_instance_profile.ec2_profile[0].name)
 
   security_groups = [aws_security_group.app_sg.name]
 
