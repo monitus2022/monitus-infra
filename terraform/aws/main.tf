@@ -181,11 +181,5 @@ resource "aws_instance" "app_instance" {
   }
 }
 
-resource "aws_eip" "app_eip" {
-  count    = length(data.aws_instances.existing.ids) == 0 ? 1 : 0
-  instance = aws_instance.app_instance[0].id
-  domain   = "vpc"
-}
-
 # Placeholder for future AWS components
 # resource "aws_db_instance" "example" { ... }  # For RDS
