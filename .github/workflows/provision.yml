@@ -62,5 +62,8 @@ jobs:
         sed -i 's/# \(  dynamodb_table.*\)/\1/' main.tf
         sed -i 's/# \(}\)/\1/' main.tf
 
+    - name: Reinitialize After Backend Changes
+      run: terraform init -reconfigure
+
     - name: Display Outputs
       run: terraform output
