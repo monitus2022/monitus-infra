@@ -30,6 +30,16 @@ data "aws_dynamodb_table" "existing_locks" {
   name = "terraform-state-lock"
 }
 
+# Check for existing IAM role
+data "aws_iam_role" "existing_ecr_role" {
+  name = "monitus-ec2-ecr-role"
+}
+
+# Check for existing instance profile
+data "aws_iam_instance_profile" "existing_profile" {
+  name = "monitus-ec2-profile"
+}
+
 # Check for existing instance with same name
 data "aws_instances" "existing" {
   filter {
@@ -111,6 +121,7 @@ resource "aws_security_group" "app_sg" {
 
 # IAM role for EC2 to access ECR
 resource "aws_iam_role" "ec2_ecr_role" {
+  count = try(data.aws_iam_role.existing_ecr_role.arn, null) == null ? 1 : 0
   name = "monitus-ec2-ecr-role"
 
   assume_role_policy = jsonencode({
@@ -128,13 +139,15 @@ resource "aws_iam_role" "ec2_ecr_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "ec2_ecr_policy" {
-  role       = aws_iam_role.ec2_ecr_role.name
+  count      = try(data.aws_iam_role.existing_ecr_role.arn, null) == null ? 1 : 0
+  role       = aws_iam_role.ec2_ecr_role[0].name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "monitus-ec2-profile"
-  role = aws_iam_role.ec2_ecr_role.name
+  count = try(data.aws_iam_instance_profile.existing_profile.arn, null) == null ? 1 : 0
+  name  = "monitus-ec2-profile"
+  role  = aws_iam_role.ec2_ecr_role[0].name
 }
 
 resource "aws_instance" "app_instance" {
