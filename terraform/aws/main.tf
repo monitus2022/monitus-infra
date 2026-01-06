@@ -30,6 +30,11 @@ data "aws_dynamodb_table" "existing_locks" {
   name = "terraform-state-lock"
 }
 
+# Check for existing Cloudflare certs bucket
+data "aws_s3_bucket" "existing_cloudflare_certs" {
+  bucket = "monitus-cloudflare-certs"
+}
+
 # Check for existing IAM role
 data "aws_iam_role" "existing_ecr_role" {
   name = "monitus-ec2-ecr-role"
@@ -89,6 +94,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
 
 # S3 bucket for Cloudflare certs
 resource "aws_s3_bucket" "cloudflare_certs" {
+  count  = try(data.aws_s3_bucket.existing_cloudflare_certs.id, "") == "" ? 1 : 0
   bucket = "monitus-cloudflare-certs"
 
   tags = {
@@ -98,13 +104,13 @@ resource "aws_s3_bucket" "cloudflare_certs" {
 
 # Upload cert files to S3
 resource "aws_s3_object" "origin_cert" {
-  bucket  = aws_s3_bucket.cloudflare_certs.id
+  bucket  = try(data.aws_s3_bucket.existing_cloudflare_certs.id, aws_s3_bucket.cloudflare_certs[0].id)
   key     = "origin.pem"
   content = var.cloudflare_origin_cert
 }
 
 resource "aws_s3_object" "origin_key" {
-  bucket  = aws_s3_bucket.cloudflare_certs.id
+  bucket  = try(data.aws_s3_bucket.existing_cloudflare_certs.id, aws_s3_bucket.cloudflare_certs[0].id)
   key     = "origin.key"
   content = var.cloudflare_origin_key
 }
