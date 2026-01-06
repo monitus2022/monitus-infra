@@ -77,8 +77,10 @@ jobs:
         sed -i 's/# \(}\)/\1/' main.tf
 
     - name: Reinitialize After Backend Changes
-      run: terraform init -reconfigure -migrate-state -lock=false
+      run: terraform init -reconfigure -lock=false
       timeout-minutes: 1
+      env:
+        TF_MIGRATE_STATE: "yes"
 
     - name: Display Outputs
       run: terraform output
