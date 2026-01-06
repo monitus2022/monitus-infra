@@ -41,11 +41,11 @@ jobs:
 
     - name: Terraform Init (Local Backend)
       if: steps.check_backend.outputs.backend_commented == 'true'
-      run: terraform init
+      run: terraform init -input=false
 
     - name: Terraform Init (S3 Backend)
       if: steps.check_backend.outputs.backend_commented == 'false'
-      run: terraform init -migrate-state
+      run: terraform init -migrate-state -input=false
 
     - name: Terraform Plan
       run: |
@@ -73,7 +73,7 @@ jobs:
       run: terraform force-unlock 7915a492-9e04-0b5b-4a94-7d187b8bc295 || true
 
     - name: Reinitialize After Backend Changes
-      run: echo "yes" | terraform init -migrate-state
+      run: terraform init -migrate-state -input=false
 
     - name: Display Outputs
       run: terraform output
