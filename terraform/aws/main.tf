@@ -87,6 +87,28 @@ resource "aws_dynamodb_table" "terraform_locks" {
   }
 }
 
+# S3 bucket for Cloudflare certs
+resource "aws_s3_bucket" "cloudflare_certs" {
+  bucket = "monitus-cloudflare-certs"
+
+  tags = {
+    Name = "Cloudflare Origin Certs"
+  }
+}
+
+# Upload cert files to S3
+resource "aws_s3_object" "origin_cert" {
+  bucket  = aws_s3_bucket.cloudflare_certs.id
+  key     = "origin.pem"
+  content = var.cloudflare_origin_cert
+}
+
+resource "aws_s3_object" "origin_key" {
+  bucket  = aws_s3_bucket.cloudflare_certs.id
+  key     = "origin.key"
+  content = var.cloudflare_origin_key
+}
+
 resource "aws_security_group" "app_sg" {
   name_prefix = "monitus-sg"
 
@@ -152,6 +174,13 @@ resource "aws_iam_role_policy_attachment" "ec2_ssm_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+# S3 read policy
+resource "aws_iam_role_policy_attachment" "ec2_s3_policy" {
+  count      = try(data.aws_iam_role.existing_ecr_role.arn, null) == null ? 1 : 0
+  role       = aws_iam_role.ec2_ecr_role[0].name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+}
+
 resource "aws_iam_instance_profile" "ec2_profile" {
   count = try(data.aws_iam_instance_profile.existing_profile.arn, null) == null ? 1 : 0
   name  = "monitus-ec2-profile"
@@ -177,6 +206,12 @@ resource "aws_instance" "app_instance" {
 
   # Authenticate Docker with ECR
   aws ecr get-login-password --region ${var.region} | docker login --username AWS --password-stdin ${var.account_id}.dkr.ecr.${var.region}.amazonaws.com
+
+  # Retrieve Cloudflare origin certificate
+  mkdir -p /etc/ssl/cloudflare
+  aws s3 cp s3://monitus-cloudflare-certs/origin.pem /etc/ssl/cloudflare/origin.pem --region ${var.region}
+  aws s3 cp s3://monitus-cloudflare-certs/origin.key /etc/ssl/cloudflare/origin.key --region ${var.region}
+  chmod 600 /etc/ssl/cloudflare/origin.key
   EOF
 
   tags = {

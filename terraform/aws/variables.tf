@@ -17,3 +17,15 @@ variable "account_id" {
   description = "AWS Account ID"
   type        = string
 }
+
+variable "cloudflare_origin_cert" {
+  description = "Cloudflare origin certificate PEM content"
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_origin_key" {
+  description = "Cloudflare origin private key PEM content"
+  type        = string
+  sensitive   = true
+}
