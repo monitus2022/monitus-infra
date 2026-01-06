@@ -45,7 +45,7 @@ jobs:
 
     - name: Terraform Init (S3 Backend)
       if: steps.check_backend.outputs.backend_commented == 'false'
-      run: terraform init -migrate-state -input=false
+      run: echo "yes" | terraform init -migrate-state
 
     - name: Terraform Plan
       run: |
@@ -68,14 +68,8 @@ jobs:
         sed -i 's/# \(  use_lockfile.*\)/\1/' main.tf
         sed -i 's/# \(}\)/\1/' main.tf
 
-    - name: Force Unlock Stale Lock
-      if: steps.check_backend.outputs.backend_commented == 'true'
-      run: |
-        terraform force-unlock 7915a492-9e04-0b5b-4a94-7d187b8bc295 || true
-        terraform force-unlock 23bcd997-8169-695f-0bd0-ee21bb1c14a7 || true
-
     - name: Reinitialize After Backend Changes
-      run: terraform init -migrate-state -input=false -lock=false
+      run: echo "yes" | terraform init -migrate-state -lock=false
 
     - name: Display Outputs
       run: terraform output
