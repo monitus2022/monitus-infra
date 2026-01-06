@@ -19,6 +19,7 @@ This repository contains Terraform configurations for deploying the Monitus appl
 ## Prerequisites
 
 - AWS Account with appropriate permissions
+- AWS CLI installed and configured with credentials
 - Cloudflare account with origin certificate generated
 - GitHub repository with secrets configured
 
@@ -41,19 +42,34 @@ Pushes to the `main` branch automatically trigger the GitHub Actions workflow, w
 2. Applies changes if approved (manual approval step)
 3. Deploys infrastructure to AWS
 
-### Manual Deployment
+### Local Deployment
 
-To deploy manually:
+To deploy locally using the provided script:
 
 1. Clone the repository
 2. Navigate to `terraform/aws/`
-3. Create a `terraform.tfvars` file with your values
-4. Run:
+3. Copy `.env.template` to `.env` and fill in your AWS credentials:
    ```bash
-   terraform init
-   terraform plan
-   terraform apply
+   cp .env.template .env
+   # Edit .env with your AWS Account ID, Access Key ID, and Secret Access Key
    ```
+4. Place your Cloudflare origin certificate files in `terraform/aws/`:
+   - `origin.pem`: The certificate file
+   - `origin.key`: The private key file
+5. Configure AWS credentials using one of the following methods:
+   - Run `aws configure` to set up your credentials interactively.
+   - Or export environment variables:
+     ```bash
+     export AWS_ACCESS_KEY_ID=your_access_key
+     export AWS_SECRET_ACCESS_KEY=your_secret_key
+     export AWS_DEFAULT_REGION=ap-northeast-3
+     ```
+6. Run the provisioning script:
+   ```bash
+   ./provision.sh
+   ```
+
+The script handles initialization, planning, applying, and backend migration automatically.
 
 ## Certificate Setup
 
@@ -61,7 +77,7 @@ The Cloudflare origin certificate is automatically injected into the EC2 instanc
 
 ## State Management
 
-Terraform state is stored in S3 with DynamoDB locking. After initial deployment, uncomment the S3 backend in `main.tf` and run `terraform init` to migrate state.
+Terraform state is stored in S3 with DynamoDB locking. The provisioning script automatically handles backend migration from local to S3 after the initial apply.
 
 ## Security
 

@@ -13,3 +13,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Environment variables
+.env
+
+# Certificate files
+origin.pem
+origin.key
