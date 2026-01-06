@@ -48,7 +48,12 @@ jobs:
       run: terraform init -migrate-state
 
     - name: Terraform Plan
-      run: terraform plan -var="account_id=${{ secrets.AWS_ACCOUNT_ID }}" -out=tfplan
+      run: |
+        terraform plan \
+          -var="account_id=${{ secrets.AWS_ACCOUNT_ID }}" \
+          -var="cloudflare_origin_cert=${{ secrets.CLOUDFLARE_ORIGIN_CERT }}" \
+          -var="cloudflare_origin_key=${{ secrets.CLOUDFLARE_ORIGIN_KEY }}" \
+          -out=tfplan
 
     - name: Terraform Apply
       run: terraform apply -auto-approve tfplan
