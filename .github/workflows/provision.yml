@@ -45,7 +45,7 @@ jobs:
 
     - name: Terraform Init (S3 Backend)
       if: steps.check_backend.outputs.backend_commented == 'false'
-      run: terraform init -migrate-state <<< "yes"
+      run: terraform init -reconfigure
 
     - name: Terraform Plan
       run: |
@@ -58,6 +58,10 @@ jobs:
     - name: Terraform Apply
       run: terraform apply -auto-approve tfplan
 
+    - name: Upload State to S3
+      if: steps.check_backend.outputs.backend_commented == 'true'
+      run: aws s3 cp .terraform/terraform.tfstate s3://monitus-terraform-state/monitus-infra/terraform.tfstate --region ap-northeast-3
+
     - name: Uncomment S3 Backend (if needed)
       if: steps.check_backend.outputs.backend_commented == 'true'
       run: |
@@ -69,7 +73,7 @@ jobs:
         sed -i 's/# \(}\)/\1/' main.tf
 
     - name: Reinitialize After Backend Changes
-      run: terraform init -migrate-state -lock=false <<< "yes"
+      run: terraform init -reconfigure -lock=false
 
     - name: Display Outputs
       run: terraform output
