@@ -45,7 +45,7 @@ jobs:
 
     - name: Terraform Init (S3 Backend)
       if: steps.check_backend.outputs.backend_commented == 'false'
-      run: echo "yes" | terraform init -migrate-state
+      run: terraform init -migrate-state <<< "yes"
 
     - name: Terraform Plan
       run: |
@@ -69,7 +69,7 @@ jobs:
         sed -i 's/# \(}\)/\1/' main.tf
 
     - name: Reinitialize After Backend Changes
-      run: echo "yes" | terraform init -migrate-state -lock=false
+      run: terraform init -migrate-state -lock=false <<< "yes"
 
     - name: Display Outputs
       run: terraform output
