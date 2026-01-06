@@ -65,8 +65,12 @@ jobs:
         sed -i 's/# \(  bucket.*\)/\1/' main.tf
         sed -i 's/# \(  key.*\)/\1/' main.tf
         sed -i 's/# \(  region.*\)/\1/' main.tf
-        sed -i 's/# \(  dynamodb_table.*\)/\1/' main.tf
+        sed -i 's/# \(  use_lockfile.*\)/\1/' main.tf
         sed -i 's/# \(}\)/\1/' main.tf
+
+    - name: Force Unlock Stale Lock
+      if: steps.check_backend.outputs.backend_commented == 'true'
+      run: terraform force-unlock 7915a492-9e04-0b5b-4a94-7d187b8bc295 || true
 
     - name: Reinitialize After Backend Changes
       run: echo "yes" | terraform init -migrate-state

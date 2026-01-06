@@ -9,10 +9,10 @@ terraform {
   # Temporarily using local backend to create state infrastructure
   # Uncomment the S3 backend after initial apply
   # backend "s3" {
-  #   bucket         = "monitus-terraform-state"
-  #   key            = "monitus-infra/terraform.tfstate"
-  #   region         = "ap-northeast-3"
-  #   dynamodb_table = "terraform-state-lock"
+  #   bucket       = "monitus-terraform-state"
+  #   key          = "monitus-infra/terraform.tfstate"
+  #   region       = "ap-northeast-3"
+  #   use_lockfile = true
   # }
 }
 
